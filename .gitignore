@@ -1,0 +1,28 @@
+# working notes / AI instructions
+CLAUDE.md
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# colab / jupyter
+.ipynb_checkpoints/
+
+# datasets — re-downloaded, never committed
+data/
+
+# training artifacts — regenerate by rerunning, too big for git
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+runs/
+wandb/
+
+# note: phase6_writeup/plots/ is deliberately NOT ignored — plots are
+# part of the write-up and should be committed.
+
+# macos
+.DS_Store

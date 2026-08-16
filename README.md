@@ -32,13 +32,13 @@ This repo tries to make that distinction concrete rather than just cited — bui
 
 ```
 paperflash/
-├── week1_baseline/     # GPT-1-style Transformer, tokenizer, training loop
-├── week2_training/     # training run on a public corpus
-├── week3_grokking/     # modular arithmetic + interpretability
-├── week4_math/         # GSM8K fine-tuning + evaluation
-├── week5_6_deltas/     # GPT-2/3-era architecture changes, retrained
-├── week7_writeup/      # findings, plots, demo
-└── CLAUDE.md           # working notes / instructions for AI-assisted development
+├── phase1_baseline/     # GPT-1-style Transformer, tokenizer, training loop
+├── phase2_training/     # training run on a public corpus
+├── phase3_grokking/     # modular arithmetic + interpretability
+├── phase4_math/         # GSM8K fine-tuning + evaluation
+├── phase5_deltas/       # GPT-2/3-era architecture changes, retrained
+├── phase6_writeup/      # findings, plots, demo
+└── notebooks/           # Colab drivers — see notebooks/README.md for setup
 ```
 
 ## Findings
