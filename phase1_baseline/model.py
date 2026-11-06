@@ -164,3 +164,18 @@ class GPT1(nn.Module):
       return logits, cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
 
     return logits, None
+
+  @torch.no_grad()
+  def generate(self, idx, max_new_tokens, temperature=1.0):
+    self.eval()
+    max_len = self.causal_mask.size(0)
+    for _ in range(max_new_tokens):
+      cropped = idx[:, -max_len:]
+      logits, _ = self(cropped)
+      last = logits[:, -1, :] / temperature
+      probs = torch.softmax(last, dim = -1)
+      next_token = torch.multinomial(probs, num_samples=1)
+      idx = torch.cat([idx, next_token], dim=1)
+    self.train()
+    return idx
+
