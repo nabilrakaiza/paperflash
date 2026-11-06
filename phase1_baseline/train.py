@@ -33,6 +33,7 @@ from .tokenizer import RegexTokenizer
 
 DATA_PATH   = os.path.join(os.path.dirname(__file__), "..", "data", "input.txt")
 TOKENIZER_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "tokenizer.json")
+CHECKPOINT_PATH = os.path.join(os.path.dirname(__file__), "..", "checkpoints", "phase1.pt")
 
 VOCAB_SIZE  = 2048    # BPE target, e.g. 1024-4096. tokenizer may end up smaller
 BLOCK_SIZE  = 128    # context length, 128-256. must equal the model's max_len
@@ -179,16 +180,54 @@ def lr_lambda(step):
 def save_checkpoint(path, model, optimizer, scheduler, step, config):
   """Save everything needed to resume, not just the weights.
 
-  TODO: torch.save a dict with model/optimizer/scheduler state_dicts,
-  the step, and the config. Dropping the optimizer state loses Adam's
-  moment estimates, and the loss visibly jumps on resume.
+  Args:
+    path:   where to write, e.g. "checkpoints/phase1.pt". The folder is
+            created if needed. checkpoints/ is gitignored.
+    config: dict of the arguments used to build the model, such as
+            {"vocab": ..., "N": ..., "d_model": ...}. A state_dict holds
+            weights but not the architecture, so this is the only record
+            of which GPT1 to rebuild before loading.
+
+  The optimizer state matters for resuming: it holds Adam's running
+  averages of past gradients. Without it the loss visibly jumps on resume.
+
+  The checkpoint is only meaningful together with data/tokenizer.json,
+  because the weights are indexed by token id.
   """
-  raise NotImplementedError
+  folder = os.path.dirname(path)
+  if folder:
+    os.makedirs(folder, exist_ok=True)
+
+  torch.save({
+    "model": model.state_dict(),
+    "optimizer": optimizer.state_dict(),
+    "scheduler": scheduler.state_dict(),
+    "step": step,
+    "config": config,
+  }, path)
 
 
-def load_checkpoint(path, model, optimizer, scheduler):
-  """Restore from save_checkpoint. Returns the step to resume at."""
-  raise NotImplementedError
+def load_checkpoint(path, model, optimizer=None, scheduler=None):
+  """Restore from save_checkpoint. Returns the step to resume at.
+
+  `model` must already be built with the same config the checkpoint was
+  saved with; loading into a different shape raises an error.
+
+  Pass optimizer and scheduler to resume training. Leave them out to load
+  only the weights, e.g. to generate text from a trained model.
+
+  map_location=DEVICE lets a checkpoint saved on Colab's GPU load on a
+  machine without one, and the other way round.
+  """
+  checkpoint = torch.load(path, map_location=DEVICE)
+
+  model.load_state_dict(checkpoint["model"])
+  if optimizer is not None:
+    optimizer.load_state_dict(checkpoint["optimizer"])
+  if scheduler is not None:
+    scheduler.load_state_dict(checkpoint["scheduler"])
+
+  return checkpoint["step"]
 
 
 # ------------------------------------------------------ steps 3-4: train
@@ -215,4 +254,38 @@ def train():
       bug in the model.
   """
 
-  
+  torch.manual_seed(SEED)
+
+  train, val, tokenizer = load_data()
+  x, y = get_batch(train, BLOCK_SIZE, BATCH_SIZE, DEVICE)
+
+  model = GPT1(tokenizer.vocab_size, N, D_MODEL, H, D_FF, DROPOUT, BLOCK_SIZE)
+  model.to(DEVICE)
+  logits, loss = model(x, y)
+
+  print(loss.item())
+  print(math.log(tokenizer.vocab_size))
+
+  optimizer = torch.optim.AdamW(model.parameters(), lr = LEARNING_RATE, weight_decay = WEIGHT_DECAY)
+  scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+  for step in range(MAX_STEPS):
+    x, y = get_batch(train, BLOCK_SIZE, BATCH_SIZE, DEVICE)
+    logits, loss = model(x, y)
+    model.zero_grad(set_to_none=True)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    optimizer.step()
+    scheduler.step()
+
+    if step % EVAL_INTERVAL == 0:
+      result = estimate_loss(model, train, val, EVAL_ITERS)
+      print(f"step {step:4d} | train {result['train']:.4f} | val {result['val']:.4f}")
+
+  result = estimate_loss(model, train, val, EVAL_ITERS)
+  print(f"step {MAX_STEPS:4d} | train {result['train']:.4f} | val {result['val']:.4f}  (final)")
+
+  # keys match GPT1's argument names, so GPT1(**config) rebuilds the model
+  config = dict(vocab=tokenizer.vocab_size, N=N, d_model=D_MODEL, h=H,
+                d_ff=D_FF, dropout=DROPOUT, max_len=BLOCK_SIZE)
+  save_checkpoint(CHECKPOINT_PATH, model, optimizer, scheduler, MAX_STEPS, config)
