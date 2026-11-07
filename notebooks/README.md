@@ -8,8 +8,13 @@ Add one notebook per phase as you go (`phase1.ipynb`, `phase2.ipynb`, ...).
 
 ## Workflow
 
-Edit on your laptop → commit → push → `git pull` in Colab → rerun the cell.
-`%autoreload 2` picks up the changed module without restarting the runtime.
+Edit on your laptop → commit → push → `git pull` in Colab → Runtime →
+Restart session → run from the top. The restart matters: Python keeps the old
+version of any module it has already imported, so a pull alone changes nothing.
+
+(Autoreload would avoid the restart, but older IPython versions of it import
+`imp`, which Python 3.12 removed, so `%load_ext autoreload` fails on Colab with
+`ModuleNotFoundError: No module named 'imp'`.)
 
 ## Cell 1 — clone / update the repo
 
@@ -18,7 +23,7 @@ Safe to rerun: clones on a fresh runtime, pulls on a warm one.
 ```python
 import os
 
-REPO = "https://github.com/<your-username>/paperflash.git"
+REPO = "https://github.com/nabilrakaiza/paperflash.git"
 
 if not os.path.exists("/content/paperflash"):
     !git clone {REPO} /content/paperflash
@@ -26,12 +31,9 @@ if not os.path.exists("/content/paperflash"):
 !git pull --ff-only
 ```
 
-## Cell 2 — autoreload + device check
+## Cell 2 — device check
 
 ```python
-%load_ext autoreload
-%autoreload 2
-
 import torch
 print("torch:", torch.__version__)
 print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
