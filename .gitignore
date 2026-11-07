@@ -10,8 +10,12 @@ venv/
 # colab / jupyter
 .ipynb_checkpoints/
 
-# datasets — re-downloaded, never committed
-data/
+# datasets — re-downloaded, never committed. data/* rather than data/:
+# git cannot re-include a file once its whole directory is excluded.
+data/*
+# except the tokenizer: every checkpoint is indexed by its token ids, so it
+# is versioned with the code (and retraining it takes minutes)
+!data/tokenizer.json
 
 # training artifacts — regenerate by rerunning, too big for git
 checkpoints/
