@@ -48,10 +48,12 @@ DROPOUT     = 0.1
 LEARNING_RATE = 3e-4  # 3e-4 to 1e-3 at this scale. GPT-1 pretrained at 2.5e-4
 WEIGHT_DECAY  = 0.01  # GPT-1's l2
 GRAD_CLIP     = 1.0   # GPT-1's max_grad_norm
-MAX_STEPS     = 500   # ~6 epochs at ~81 steps/epoch on this corpus
+MAX_STEPS     = 5000  # ~62 epochs at ~81 steps/epoch. 500 under-trained
+                      # (val 5.04, above bigram 4.81). Expect val to bottom
+                      # out and rise late: the checkpoint is saved at the end
 WARMUP_FRAC   = 0.05  # 0.05-0.10. post-LN needs this; too short and loss spikes
 
-EVAL_INTERVAL = 50    # 10 eval points over the run, ~every half epoch
+EVAL_INTERVAL = 250   # 20 eval points over the run
 EVAL_ITERS    = 20    # 2 splits x 20 batches per eval, ~27% overhead
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
