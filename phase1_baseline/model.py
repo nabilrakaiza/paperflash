@@ -167,6 +167,9 @@ class GPT1(nn.Module):
 
   @torch.no_grad()
   def generate(self, idx, max_new_tokens, temperature=1.0):
+    # remember the caller's mode so we can put it back, rather than always
+    # leaving the model in train mode afterwards
+    was_training = self.training
     self.eval()
     max_len = self.causal_mask.size(0)
     for _ in range(max_new_tokens):
@@ -176,6 +179,6 @@ class GPT1(nn.Module):
       probs = torch.softmax(last, dim = -1)
       next_token = torch.multinomial(probs, num_samples=1)
       idx = torch.cat([idx, next_token], dim=1)
-    self.train()
+    self.train(was_training)    # train(False) is the same as eval()
     return idx
 
